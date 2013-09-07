@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">Dual Boot Switcher</string>
+    <string name="action_settings">Settings</string>
+    <string name="hello_world">Dual boot switcher!</string>
+
+    <string name="no_root_access">Failed to obtain root access!</string>
+    <string name="ok">OK</string>
+
+</resources>
