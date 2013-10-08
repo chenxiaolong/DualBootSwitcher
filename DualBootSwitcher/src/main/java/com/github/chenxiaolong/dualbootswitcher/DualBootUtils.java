@@ -157,12 +157,13 @@ public class DualBootUtils {
     public static void reboot() {
         // Samsung's bootloader refuses to boot the new kernel if Android's
         // reboot button is pressed
-        String command =
+        /*String command =
                 "ps | grep '^u[0-9]*_' | awk '{print $2}' | xargs kill;" +
                 "sync;" +
                 "echo 1 > /proc/sys/kernel/sysrq;" +
                 "echo s > /proc/sysrq-trigger;" +
-                "echo b > /proc/sysrq-trigger";
+                "echo b > /proc/sysrq-trigger";*/
+        String command = "reboot";
 
         try {
             Log.v(TAG, "Running reboot command: \"" + command + "\"");

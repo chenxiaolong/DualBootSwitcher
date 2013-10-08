@@ -41,7 +41,7 @@ public class MainActivity extends FragmentActivity {
 
         addChooseRomItem(ll);
         addBackupKernelItem(ll);
-        //addRebootItem(ll);
+        addRebootItem(ll);
         addAboutItem(ll);
         addExitItem(ll);
         sv.setFillViewport(true);
@@ -266,7 +266,7 @@ public class MainActivity extends FragmentActivity {
         textView.setText("Reboot");
 
         ImageView imageView = (ImageView)rowView.findViewById(R.id.icon_list_item);
-        imageView.setImageResource(R.drawable.ic_navigation_refresh);;
+        imageView.setImageResource(R.drawable.ic_navigation_refresh);
 
         rowView.setOnClickListener(new View.OnClickListener() {
             @Override
