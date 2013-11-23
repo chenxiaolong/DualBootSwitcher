@@ -27,6 +27,9 @@ public class MainActivity extends FragmentActivity {
                  itemAbout,
                  itemExit;
 
+    private View[] itemsChooseMultiSlotRom,
+                   itemsBackupMultiSlotKernel;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -38,6 +41,10 @@ public class MainActivity extends FragmentActivity {
 
         ScrollView sv = (ScrollView)findViewById(R.id.scroll_view);
         LinearLayout ll = (LinearLayout)findViewById(R.id.main_menu);
+
+        int n = getNumberOfRoms();
+        itemsChooseMultiSlotRom = new View[n];
+        itemsBackupMultiSlotKernel = new View[n];
 
         addChooseRomItem(ll);
         addBackupKernelItem(ll);
@@ -61,12 +68,6 @@ public class MainActivity extends FragmentActivity {
         if (SharedState.mSimpleDialogVisible) {
             DialogUtils.showDialog(SharedState.mSimpleDialogText);
         }
-
-        if (!isSecondRomInstalled()) {
-            setRomChoiceExpanded(false);
-            itemChooseRom.setVisibility(View.GONE);
-            itemBackupSecondaryKernel.setVisibility(View.GONE);
-        }
     }
 
     @Override
@@ -77,6 +78,20 @@ public class MainActivity extends FragmentActivity {
             SharedState.mProgressDialog = null;
         }
         SharedState.mActivity = null;
+
+        if (itemsChooseMultiSlotRom != null) {
+            for (int i = 0; i < itemsChooseMultiSlotRom.length; i++) {
+                itemsChooseMultiSlotRom[i] = null;
+            }
+            itemsChooseMultiSlotRom = null;
+        }
+
+        if (itemsBackupMultiSlotKernel != null) {
+            for (int i = 0; i < itemsBackupMultiSlotKernel.length; i++) {
+                itemsBackupMultiSlotKernel[i] = null;
+            }
+            itemsBackupMultiSlotKernel = null;
+        }
     }
 
     private void addChooseRomItem(LinearLayout layout) {
@@ -141,18 +156,15 @@ public class MainActivity extends FragmentActivity {
     private synchronized void setRomChoiceExpanded(boolean expanded) {
         final ImageView imageView = (ImageView)itemChooseRom.findViewById(R.id.icon_list_item);
 
-        if (expanded == true && isSecondRomInstalled()) {
+        if (expanded == true) {
             imageView.setImageResource(R.drawable.ic_navigation_collapse);
-            MainActivity.this.itemChoosePrimaryRom.setVisibility(View.VISIBLE);
-            MainActivity.this.itemChooseSecondaryRom.setVisibility(View.VISIBLE);
-            SharedState.romChoiceExpanded = true;
         }
         else {
             imageView.setImageResource(R.drawable.ic_navigation_expand);
-            MainActivity.this.itemChoosePrimaryRom.setVisibility(View.GONE);
-            MainActivity.this.itemChooseSecondaryRom.setVisibility(View.GONE);
-            SharedState.romChoiceExpanded = false;
         }
+
+        refreshChoiceItems(expanded);
+        SharedState.romChoiceExpanded = expanded;
     }
 
     private synchronized void setBackupKernelExpanded(boolean expanded) {
@@ -160,18 +172,13 @@ public class MainActivity extends FragmentActivity {
 
         if (expanded == true) {
             imageView.setImageResource(R.drawable.ic_navigation_collapse);
-            MainActivity.this.itemBackupPrimaryKernel.setVisibility(View.VISIBLE);
-            if (isSecondRomInstalled()) {
-                MainActivity.this.itemBackupSecondaryKernel.setVisibility(View.VISIBLE);
-            }
-            SharedState.backupKernelExpanded = true;
         }
         else {
             imageView.setImageResource(R.drawable.ic_navigation_expand);
-            MainActivity.this.itemBackupPrimaryKernel.setVisibility(View.GONE);
-            MainActivity.this.itemBackupSecondaryKernel.setVisibility(View.GONE);
-            SharedState.backupKernelExpanded = false;
         }
+
+        refreshBackupItems(expanded);
+        SharedState.backupKernelExpanded = expanded;
     }
 
     private void addRomChoiceItems(LinearLayout layout) {
@@ -196,24 +203,39 @@ public class MainActivity extends FragmentActivity {
         itemChoosePrimaryRom.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if (SharedState.busyWritingKernel) {
-                    DialogUtils.showDialog("How did you manage to get here?");
-                }
-                final WriteKernel task = new WriteKernel();
-                task.execute(SharedState.KERNEL_PRIMARY);
+                writeKernel(SharedState.KERNEL_PRIMARY);
             }
         });
 
         itemChooseSecondaryRom.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if (SharedState.busyWritingKernel) {
-                    DialogUtils.showDialog("How did you manage to get here?");
-                }
-                final WriteKernel task = new WriteKernel();
-                task.execute(SharedState.KERNEL_SECONDARY);
+                writeKernel(SharedState.KERNEL_SECONDARY);
             }
         });
+
+        for (int i = 0; i < itemsChooseMultiSlotRom.length; i++) {
+            View temp = inflater.inflate(R.layout.exp_list_item, null);
+            layout.addView(temp);
+
+            TextView text = (TextView) temp.findViewById(R.id.label_list_item);
+            text.setText("Extra ROM slot " + (i + 1));
+
+            ImageView image = (ImageView) temp.findViewById(R.id.icon_list_item);
+            image.setImageResource(R.drawable.ic_1);
+
+            temp.setVisibility(View.GONE);
+
+            final int j = i + 1;
+            temp.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    writeKernel(j);
+                }
+            });
+
+            itemsChooseMultiSlotRom[i] = temp;
+        }
     }
 
     private void addBackupKernelItems(LinearLayout layout) {
@@ -238,24 +260,39 @@ public class MainActivity extends FragmentActivity {
         itemBackupPrimaryKernel.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if (SharedState.busyBackingUpKernel) {
-                    DialogUtils.showDialog("How did you manage to get here?");
-                }
-                final BackupKernel task = new BackupKernel();
-                task.execute(SharedState.KERNEL_PRIMARY);
+                backupKernel(SharedState.KERNEL_PRIMARY);
             }
         });
 
         itemBackupSecondaryKernel.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if (SharedState.busyBackingUpKernel) {
-                    DialogUtils.showDialog("How did you manage to get here?");
-                }
-                final BackupKernel task = new BackupKernel();
-                task.execute(SharedState.KERNEL_SECONDARY);
+                backupKernel(SharedState.KERNEL_SECONDARY);
             }
         });
+
+        for (int i = 0; i < itemsBackupMultiSlotKernel.length; i++) {
+            View temp = inflater.inflate(R.layout.exp_list_item, null);
+            layout.addView(temp);
+
+            TextView text = (TextView) temp.findViewById(R.id.label_list_item);
+            text.setText("Extra ROM slot " + (i + 1));
+
+            ImageView image = (ImageView) temp.findViewById(R.id.icon_list_item);
+            image.setImageResource(R.drawable.ic_1);
+
+            temp.setVisibility(View.GONE);
+
+            final int j = i + 1;
+            temp.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    backupKernel(j);
+                }
+            });
+
+            itemsBackupMultiSlotKernel[i] = temp;
+        }
     }
 
     private void addRebootItem(LinearLayout layout) {
@@ -313,14 +350,109 @@ public class MainActivity extends FragmentActivity {
         });
     }
 
-    private boolean isSecondRomInstalled() {
-        File temp = new File("/raw-system/dual");
-        if (!temp.exists() || !temp.isDirectory()) {
-            temp = new File("/system/dual");
-            if (!temp.exists() || !temp.isDirectory()) {
-                return false;
+    private void writeKernel(int which) {
+        if (SharedState.busyWritingKernel) {
+            DialogUtils.showDialog("How did you manage to get here?");
+        }
+        final WriteKernel task = new WriteKernel();
+        task.execute(which);
+    }
+
+    private void backupKernel(int which) {
+        if (SharedState.busyBackingUpKernel) {
+            DialogUtils.showDialog("How did you manage to get here?");
+        }
+        final BackupKernel task = new BackupKernel();
+        task.execute(which);
+    }
+
+    private boolean isExistsRom(String path) {
+        File f = new File(path);
+        if (f.exists() && f.isDirectory()) {
+            return true;
+        }
+        return false;
+    }
+
+    private boolean isExistsMultiRomSlot(int n) {
+        if (isExistsRom("/raw-cache/multi-slot-" + n)
+                || isExistsRom("/cache/multi-slot-" + n)) {
+            return true;
+        }
+        return false;
+    }
+
+    private int getNumberOfRoms() {
+        int counter = 1;
+        // 10 ROMs should be enough, shouldn't it?
+        int max = 10;
+
+        for (int i = 0; i < max; i++) {
+            if (isExistsMultiRomSlot(i)) {
+                counter++;
             }
         }
-        return true;
+
+        return counter;
+    }
+
+    private void refreshChoiceItems(boolean show) {
+        if (show) {
+            MainActivity.this.itemChoosePrimaryRom.setVisibility(View.VISIBLE);
+        }
+        else {
+            MainActivity.this.itemChoosePrimaryRom.setVisibility(View.GONE);
+        }
+
+        if (isExistsRom("/raw-system/dual")
+                || isExistsRom("/system/dual")) {
+            if (show) {
+                itemChooseSecondaryRom.setVisibility(View.VISIBLE);
+            }
+            else {
+                itemChooseSecondaryRom.setVisibility(View.GONE);
+            }
+        }
+
+        for (int i = 0; i < itemsChooseMultiSlotRom.length; i++) {
+            if (isExistsMultiRomSlot(i + 1)) {
+                if (show) {
+                    itemsChooseMultiSlotRom[i].setVisibility(View.VISIBLE);
+                }
+                else {
+                    itemsChooseMultiSlotRom[i].setVisibility(View.GONE);
+                }
+            }
+        }
+    }
+
+    private void refreshBackupItems(boolean show) {
+        if (show) {
+            itemBackupPrimaryKernel.setVisibility(View.VISIBLE);
+        }
+        else {
+            itemBackupPrimaryKernel.setVisibility(View.GONE);
+        }
+
+        if (isExistsRom("/raw-system/dual")
+                || isExistsRom("/system/dual")) {
+            if (show) {
+                itemBackupSecondaryKernel.setVisibility(View.VISIBLE);
+            }
+            else {
+                itemBackupSecondaryKernel.setVisibility(View.GONE);
+            }
+        }
+
+        for (int i = 0; i < itemsBackupMultiSlotKernel.length; i++) {
+            if (isExistsMultiRomSlot(i + 1)) {
+                if (show) {
+                    itemsBackupMultiSlotKernel[i].setVisibility(View.VISIBLE);
+                }
+                else {
+                    itemsBackupMultiSlotKernel[i].setVisibility(View.GONE);
+                }
+            }
+        }
     }
 }

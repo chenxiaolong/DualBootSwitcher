@@ -35,7 +35,7 @@ public class SharedState {
     public final static int ERROR_OTHER = 6;
     public final static int ERROR_COMMAND_FAILED = 7;
 
-    public final static int KERNEL_PRIMARY = 1;
-    public final static int KERNEL_SECONDARY = 2;
+    public final static int KERNEL_PRIMARY = -1;
+    public final static int KERNEL_SECONDARY = -2;
     public final static String BOOT_PARTITION = "/dev/block/platform/msm_sdcc.1/by-name/boot";
 }

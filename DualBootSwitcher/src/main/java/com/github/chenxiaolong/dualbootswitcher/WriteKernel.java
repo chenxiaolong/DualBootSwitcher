@@ -34,7 +34,6 @@ public class WriteKernel extends AsyncTask<Integer, Void, Integer> {
         SharedState.mProgressDialogVisible = false;
         SharedState.mProgressDialog.dismiss();
         if (result == SharedState.SUCCESS) {
-            //DialogUtils.showDialog("Now just click the reboot button in *this app* :)");
             DialogUtils.showDialog("Now just reboot :) (and make sure to unplug the USB cable)");
         }
         else {

@@ -52,12 +52,16 @@ public class DualBootUtils {
 
             String backup_path = "";
             if (which == SharedState.KERNEL_PRIMARY) {
-                Log.v(TAG, "Backup up primary kernel");
+                Log.v(TAG, "Backing up primary kernel");
                 backup_path = kernel_path + "/primary.img";
             }
             else if (which == SharedState.KERNEL_SECONDARY) {
-                Log.v(TAG, "Backup up secondary kernel");
+                Log.v(TAG, "Backing up secondary kernel");
                 backup_path = kernel_path + "/secondary.img";
+            }
+            else {
+                Log.v(TAG, "Backing up slot " + which + "'s kernel");
+                backup_path = kernel_path + "/multi-slot-" + which + ".img";
             }
 
             exitStatus = runCommand("dd if=" + SharedState.BOOT_PARTITION + " of=" + backup_path);
@@ -93,6 +97,9 @@ public class DualBootUtils {
         }
         else if (which == SharedState.KERNEL_SECONDARY) {
             path = "/raw-system/dual-kernels/secondary.img";
+        }
+        else {
+            path = "/raw-system/dual-kernels/multi-slot-" + which + ".img";
         }
 
         try {
@@ -155,19 +162,8 @@ public class DualBootUtils {
     }
 
     public static void reboot() {
-        // Samsung's bootloader refuses to boot the new kernel if Android's
-        // reboot button is pressed
-        /*String command =
-                "ps | grep '^u[0-9]*_' | awk '{print $2}' | xargs kill;" +
-                "sync;" +
-                "echo 1 > /proc/sys/kernel/sysrq;" +
-                "echo s > /proc/sysrq-trigger;" +
-                "echo b > /proc/sysrq-trigger";*/
-        String command = "reboot";
-
         try {
-            Log.v(TAG, "Running reboot command: \"" + command + "\"");
-            runCommand(command);
+            runCommand("reboot");
         }
         catch (Exception e) {
         }
