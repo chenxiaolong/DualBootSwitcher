@@ -367,16 +367,30 @@ public class MainActivity extends FragmentActivity {
     }
 
     private boolean isExistsRom(String path) {
-        File f = new File(path);
-        if (f.exists() && f.isDirectory()) {
-            return true;
+        File rawcache = new File("/raw-cache");
+        File cache = new File("/cache");
+        if ((rawcache.exists() && rawcache.canRead())
+                || (cache.exists() && cache.canRead())) {
+            File f = new File(path);
+            if (f.exists() && f.isDirectory()) {
+                return true;
+            }
+            return false;
         }
-        return false;
+        else {
+            int ret = 1;
+            try {
+                ret = DualBootUtils.runCommand("ls " + path);
+            }
+            catch (Exception e) {
+            }
+            return ret == 0;
+        }
     }
 
     private boolean isExistsMultiRomSlot(int n) {
-        if (isExistsRom("/raw-cache/multi-slot-" + n)
-                || isExistsRom("/cache/multi-slot-" + n)) {
+        if (isExistsRom("/raw-cache/multi-slot-" + n + "/system")
+                || isExistsRom("/cache/multi-slot-" + n + "/system")) {
             return true;
         }
         return false;

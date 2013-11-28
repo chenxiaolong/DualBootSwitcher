@@ -169,10 +169,10 @@ public class DualBootUtils {
         }
     }
 
-    private static int runCommand(String command_string) throws TimeoutException,
-                                                                RootDeniedException,
-                                                                IOException,
-                                                                InterruptedException {
+    public static int runCommand(String command_string) throws TimeoutException,
+                                                               RootDeniedException,
+                                                               IOException,
+                                                               InterruptedException {
         int status = requestRootAccess();
         if (status != SharedState.SUCCESS) {
             throw new RootDeniedException("Root access denied");
