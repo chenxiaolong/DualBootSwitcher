@@ -2,10 +2,22 @@
 <resources>
 
     <string name="app_name">Dual Boot Switcher</string>
-    <string name="action_settings">Settings</string>
-    <string name="hello_world">Dual boot switcher!</string>
-
-    <string name="no_root_access">Failed to obtain root access!</string>
+    <string name="choice_choose_rom">Choose ROM</string>
+    <string name="choice_set_kernel">Set current Kernel as &#8230;</string>
+    <string name="choice_reboot">Reboot</string>
+    <string name="choice_about">Version %s</string>
+    <string name="choice_exit">Exit</string>
+    <string name="primary">Primary</string>
+    <string name="secondary">Secondary</string>
+    <string name="multislot">Multi Slot %s</string>
+    <string name="couldnt_determine_version">Couldn\'t determine ROM version</string>
+    <string name="write_kernel_success">Successfully wrote kernel</string>
+    <string name="write_kernel_failure">Failed to write kernel</string>
+    <string name="write_kernel_msg">Successfully switched to %s</string>
+    <string name="back_up_kernel_success">Successfully set kernel</string>
+    <string name="back_up_kernel_failure">Failed to set kernel</string>
+    <string name="back_up_kernel_msg">Successfully set the current kernel as the kernel for %s</string>
+    <string name="reboot_failed">Failed to reboot</string>
     <string name="ok">OK</string>
 
 </resources>

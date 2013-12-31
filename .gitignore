@@ -3,8 +3,22 @@ local.properties
 .idea/
 *.iml
 
+# Eclipse stuff
+.classpath
+.project
+.settings/
+bin/
+gen/
+
 # Gradle stuff
 .gradle/
 
 # Compiled files
-*/build/
+build/
+*.apk
+
+# Signing stuff
+signing.properties
+
+# Miscellaneous
+*.swp

@@ -1,196 +1,104 @@
 package com.github.chenxiaolong.dualbootswitcher;
 
-import android.app.Activity;
-import android.app.AlertDialog;
-import android.app.Dialog;
-import android.app.DialogFragment;
-import android.content.DialogInterface;
-import android.os.Bundle;
-import android.util.Log;
-
-import com.stericson.RootTools.RootTools;
-import com.stericson.RootTools.exceptions.RootDeniedException;
-import com.stericson.RootTools.execution.Command;
-import com.stericson.RootTools.execution.CommandCapture;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.TimeoutException;
 
+import android.util.Log;
+
+import com.stericson.RootTools.exceptions.RootDeniedException;
+
 public class DualBootUtils {
-    public final static String TAG = "DualBootUtils";
+    public static final String TAG = "DualBootUtils";
+    public static final String BOOT_PARTITION = "/dev/block/platform/msm_sdcc.1/by-name/boot";
+    // Can't use Environment.getExternalStorageDirectory() because the path is
+    // different in the root environment
+    public static final String KERNEL_PATH_ROOT = "/raw-data/media/0/MultiKernels";
 
-    public static int backupKernel(int which) {
-        String system_path = "/raw-system";
+    public static void writeKernel(String rom) throws Exception {
+        String rom_id = RomDetector.getId(rom);
 
-        try {
-            int exitStatus;
+        String[] paths = new String[] { KERNEL_PATH_ROOT,
+                KERNEL_PATH_ROOT.replace("raw-data", "data"),
+                "/raw-system/dual-kernels", "/system/dual-kernels" };
 
-            exitStatus = runCommand("ls " + system_path);
-            if (exitStatus != 0) {
-                Log.v(TAG, "/raw-system does not exist; using /system");
-                system_path = system_path.replace("raw-system", "system");
-                exitStatus = runCommand("ls " + system_path);
-                if (exitStatus != 0) {
-                    return SharedState.ERROR_DIRECTORY_NOT_FOUND;
-                }
+        String kernel = null;
+        for (String path : paths) {
+            String temp = path + File.separator + rom_id + ".img";
+            Commands.CommandResult result = Commands.runCommand("ls " + temp);
+            if (result.exitCode != 0) {
+                Log.e(TAG, temp + " not found");
+                continue;
             }
+            kernel = temp;
+            break;
+        }
 
-            Log.v(TAG, "Trying to remount /system with read-write permissions");
-            mountSystemReadWrite();
+        if (kernel == null) {
+            throw new Exception("The kernel for " + rom + " was not found");
+        }
 
-            String kernel_path = system_path + "/dual-kernels";
-            exitStatus = runCommand("ls " + kernel_path);
-            if (exitStatus != 0) {
-                Log.v(TAG, kernel_path + " does not exist; creating it");
-                exitStatus = runCommand("mkdir " + kernel_path);
-                if (exitStatus != 0) {
-                    Log.e(TAG, "Failed to create " + kernel_path);
-                    return SharedState.ERROR_COMMAND_FAILED;
-                }
-            }
-
-            String backup_path = "";
-            if (which == SharedState.KERNEL_PRIMARY) {
-                Log.v(TAG, "Backing up primary kernel");
-                backup_path = kernel_path + "/primary.img";
-            }
-            else if (which == SharedState.KERNEL_SECONDARY) {
-                Log.v(TAG, "Backing up secondary kernel");
-                backup_path = kernel_path + "/secondary.img";
-            }
-            else {
-                Log.v(TAG, "Backing up slot " + which + "'s kernel");
-                backup_path = kernel_path + "/multi-slot-" + which + ".img";
-            }
-
-            exitStatus = runCommand("dd if=" + SharedState.BOOT_PARTITION + " of=" + backup_path);
-
-            if (exitStatus != 0) {
-                Log.e(TAG, "Failed to backup to " + backup_path + " with dd");
-                return SharedState.ERROR_COMMAND_FAILED;
-            }
-
-            Log.v(TAG, "Trying to remount /system with read-only permissions");
-            mountSystemReadOnly();
-
-            return SharedState.SUCCESS;
-        } catch (IOException e) {
-            e.printStackTrace();
-            return SharedState.ERROR_OTHER;
-        } catch (TimeoutException e) {
-            e.printStackTrace();
-            return SharedState.ERROR_TIMEOUT;
-        } catch (RootDeniedException e) {
-            e.printStackTrace();
-            return SharedState.ERROR_ROOT_DENIED;
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-            return SharedState.ERROR_OTHER;
+        Commands.CommandResult result = Commands.runCommand("dd if=" + kernel
+                + " of=" + BOOT_PARTITION);
+        if (result.exitCode != 0) {
+            Log.e(TAG, "Failed to write " + kernel + " with dd");
+            throw new Exception("Failed to write " + kernel + " with dd");
         }
     }
 
-    public static int writeKernel(int which) {
-        String path = "";
-        if (which == SharedState.KERNEL_PRIMARY) {
-            path = "/raw-system/dual-kernels/primary.img";
+    public static void backupKernel(String rom) throws Exception {
+        String rom_id = RomDetector.getId(rom);
+
+        String kernel_path = KERNEL_PATH_ROOT;
+        Commands.CommandResult result = Commands.runCommand("ls /raw-data");
+        if (result.exitCode != 0) {
+            kernel_path = kernel_path.replace("raw-data", "data");
         }
-        else if (which == SharedState.KERNEL_SECONDARY) {
-            path = "/raw-system/dual-kernels/secondary.img";
+        Commands.runCommand("mkdir -p " + kernel_path);
+        String kernel = kernel_path + File.separator + rom_id + ".img";
+
+        Log.v(TAG, "Trying to remount /system with read-write permissions");
+        mountSystemReadWrite();
+
+        Log.v(TAG, "Backing up " + rom_id + " kernel");
+
+        result = Commands.runCommand("dd if=" + BOOT_PARTITION + " of="
+                + kernel);
+
+        if (result.exitCode != 0) {
+            Log.e(TAG, "Failed to backup to " + kernel + " with dd");
+            throw new Exception("Failed to backup to " + kernel + " with dd");
         }
-        else {
-            path = "/raw-system/dual-kernels/multi-slot-" + which + ".img";
-        }
 
-        try {
-            int exitStatus;
+        Log.v(TAG, "Trying to remount /system with read-only permissions");
+        mountSystemReadOnly();
 
-            exitStatus = runCommand("ls " + path);
-            if (exitStatus != 0) {
-                Log.v(TAG, path + " not found; trying /system");
-                path = path.replace("raw-system", "system");
-                exitStatus = runCommand("ls " + path);
-                if (exitStatus != 0) {
-                    Log.e(TAG, path + " not found");
-                    return SharedState.ERROR_FILE_NOT_FOUND;
-                }
-            }
-
-            exitStatus = runCommand("dd if=" + path + " of=" + SharedState.BOOT_PARTITION);
-
-            if (exitStatus != 0) {
-                Log.e(TAG, "Failed to write " + path + " with dd");
-                return SharedState.ERROR_COMMAND_FAILED;
-            }
-
-            return SharedState.SUCCESS;
-        } catch (IOException e) {
-            e.printStackTrace();
-            return SharedState.ERROR_OTHER;
-        } catch (TimeoutException e) {
-            e.printStackTrace();
-            return SharedState.ERROR_TIMEOUT;
-        } catch (RootDeniedException e) {
-            e.printStackTrace();
-            return SharedState.ERROR_ROOT_DENIED;
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-            return SharedState.ERROR_OTHER;
-        }
+        Log.v(TAG, "Fixing permissions");
+        Commands.runCommand("chmod -R 775 " + kernel_path);
+        Commands.runCommand("chown -R media_rw:media_rw " + kernel_path);
     }
 
     private static void mountSystemReadWrite() throws TimeoutException,
-                                                      RootDeniedException,
-                                                      IOException,
-                                                      InterruptedException {
-        int exitStatus = runCommand("ls /raw-system");
-        if (exitStatus == 0) {
-            runCommand("mount -o remount,rw /raw-system");
+            RootDeniedException, IOException, InterruptedException {
+        Commands.CommandResult result = Commands.runCommand("ls /raw-system");
+        String system;
+        if (result.exitCode == 0) {
+            system = "/raw-system";
+        } else {
+            system = "/system";
         }
-        runCommand("mount -o remount,rw /system");
+        Commands.runCommand("mount -o remount,rw " + system);
     }
 
     private static void mountSystemReadOnly() throws TimeoutException,
-                                                     RootDeniedException,
-                                                     IOException,
-                                                     InterruptedException {
-        int exitStatus = runCommand("ls /raw-system");
-        if (exitStatus == 0) {
-            runCommand("mount -o remount,ro /raw-system");
+            RootDeniedException, IOException, InterruptedException {
+        Commands.CommandResult result = Commands.runCommand("ls /raw-system");
+        String system;
+        if (result.exitCode == 0) {
+            system = "/raw-system";
+        } else {
+            system = "/system";
         }
-        runCommand("mount -o remount,ro /system");
-    }
-
-    public static void reboot() {
-        try {
-            runCommand("reboot");
-        }
-        catch (Exception e) {
-        }
-    }
-
-    public static int runCommand(String command_string) throws TimeoutException,
-                                                               RootDeniedException,
-                                                               IOException,
-                                                               InterruptedException {
-        int status = requestRootAccess();
-        if (status != SharedState.SUCCESS) {
-            throw new RootDeniedException("Root access denied");
-        }
-
-        CommandCapture command = new CommandCapture(0, command_string);
-        Command process = RootTools.getShell(true).add(command);
-        process.waitForFinish();
-        return process.exitCode();
-    }
-
-    private static int requestRootAccess() {
-        //if (!RootTools.isRootAvailable()) {
-        //    return ERROR_NO_ROOT;
-        //}
-        if (!RootTools.isAccessGiven()) {
-            return SharedState.ERROR_ROOT_DENIED;
-        }
-        return SharedState.SUCCESS;
+        Commands.runCommand("mount -o remount,ro " + system);
     }
 }
