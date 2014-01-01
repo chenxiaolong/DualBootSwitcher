@@ -31,9 +31,14 @@ public class RomDetector {
         if (mRoms == null) {
             mRoms = new ArrayList<String>();
 
-            File primary = new File("/system/build.prop");
-            if (primary.exists()) {
+            // Primary - either:
+            // - No /raw-system and have /system/build.prop
+            // - Have /raw-system/build.prop
+            if (!new File("/raw-system").exists()
+                    && new File("/system/build.prop").exists()) {
                 mRoms.add("/system");
+            } else if (new File("/raw-system/build.prop").exists()) {
+                mRoms.add("/raw-system");
             }
 
             if (isExistsRom("/raw-system/dual")) {
@@ -56,7 +61,7 @@ public class RomDetector {
     }
 
     private static String getDefaultName(Context context, String rom) {
-        if (rom.equals("/system")) {
+        if (rom.equals("/system") || rom.equals("/raw-system")) {
             return context.getString(R.string.primary);
         } else if (rom.contains("system/dual")) {
             return context.getString(R.string.secondary);
@@ -80,7 +85,7 @@ public class RomDetector {
     }
 
     public static String getId(String rom) {
-        if (rom.equals("/system")) {
+        if (rom.equals("/system") || rom.equals("/raw-system")) {
             return "primary";
         } else if (rom.contains("system/dual")) {
             return "secondary";
